@@ -119,6 +119,7 @@ def get_fs(
     fs_df_terms.rename(index={'202112': '202012'}, inplace=True)
     # the pages (json files) are duplicated at the end terms
     fs_df_terms = fs_df_terms[~fs_df_terms.index.duplicated(keep='first')]
+    fs_df_terms = fs_df_terms.loc[:, ~fs_df_terms.columns.duplicated(keep='first')]
     fs_df_terms = fs_df_terms.sort_index(ascending=False)
     fs_df_terms = fs_df_terms.reset_index()
     fs_df_terms = fs_df_terms.rename(columns={'PeriodEnd': time_col, 'YearPeriod': time_col})
