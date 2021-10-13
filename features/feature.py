@@ -1,6 +1,5 @@
-'''
-This script is to generate features data for stock trading.
-'''
+"""This script is to generate features data for stock trading.
+"""
 __author__ = 'Khanh Truong'
 __date__ = '2021-09-20'
 
@@ -12,19 +11,14 @@ import json
 
 
 def get_tickers(folder: str = '../financeInfo') -> list[str]:
-    '''
-    Get all tickers in a folder
+    """Get all tickers in a folder.
 
-    Parameters
-    ----------
-    folder : str
-        Path to folder wanted to get tickers. Ex: '../data/excelfull'
+    Args:
+        folder (str, optional): Path to folder wanted to get tickers. Defaults to '../financeInfo'.
 
-    Returns
-    -------
-    list of str
-        List of tickers. Ex: ['A32', 'AAM', 'AAT', ...]
-    '''
+    Returns:
+        list[str]: List of tickers. Ex: ['A32', 'AAM', 'AAT', ...].
+    """
     file_names = pd.Series(os.listdir(folder))
     file_names = file_names.sort_values().str.split('_')
     tickers = [file_name[0] for file_name in file_names]
@@ -43,10 +37,32 @@ def get_fs(
     ticker_col: str = 'Ticker',
     time_col: str = 'Feat_Time'
 ) -> pd.DataFrame:
-    '''Get financial statement of a ticker.
-    Financial statement can be 'KQKD', 'CDKT', 'LC', 'CSTC' or 'CTKH'.
-    '''
+    """Get financial statement of a ticker.
 
+    Args:
+        ticker (str): Company ticker that want to get financial statement for.
+        fs (str): Type of financial statement. Can be 'KQKD', 'CDKT', 'LC', 'CSTC' or 'CTKH'.
+        term (str): 'Quarter' or 'Annual'.
+        levels (list[int], optional): The headline levels in financial statement that want to get.
+            The more levels, the more detail. Ranging from 0 to 6. Only applicable for 'CDKT.
+            Defaults to [0, 1, 2].
+        name (str, optional): Headline languages. 'NameEn' for English. 'Name' for Vietnamese.
+            'ReportNormID' for code. 'ID' for 1, 2, 3, etc. Defaults to 'NameEn'.
+        raw_path (str, optional): Path to folder stored the raw files.
+            Defaults to '../financeInfo/'.
+        ticker_col (str, optional): Name of the column ticker in output dataframe.
+            Defaults to 'Ticker'.
+        time_col (str, optional): Name of the column time in output dataframe.
+            Defaults to 'Feat_Time'.
+
+    Raises:
+        ValueError: Choose one of ['KQKD', 'CDKT', 'LC', 'CSTC', 'CTKH']
+        ValueError: Choose one of ['Quarter', 'Annual']
+        ValueError: Choose one of ['NameEn', 'Name', 'ReportNormID', 'ID']
+
+    Returns:
+        pd.DataFrame: financial statement
+    """
     if fs not in ['KQKD', 'CDKT', 'LC', 'CSTC', 'CTKH']:
         raise ValueError("fs must be one of ['KQKD', 'CDKT', 'LC', 'CSTC', 'CTKH'].")
     if term not in ['Quarter', 'Annual']:
@@ -136,7 +152,17 @@ class FSFeatures:
         window: int,
         meta_cols: list[str] = ['Ticker', 'Feat_Time']
     ) -> pd.DataFrame:
-        '''Calculate moving average (roll mean) of financial statement.'''
+        """Calculate moving average (roll mean) of financial statement.
+
+        Args:
+            df (pd.DataFrame): Features data.
+            window (int): Number of periods to calculate the average mean.
+            meta_cols (list[str], optional): Columns to be excluded from calculating average mean.
+                Defaults to ['Ticker', 'Feat_Time'].
+
+        Returns:
+            pd.DataFrame: Moving average features.
+        """
         meta = df[meta_cols]
         roll_mean = (
             df
@@ -157,7 +183,17 @@ class FSFeatures:
         periods: int,
         meta_cols: list[str] = ['Ticker', 'Feat_Time']
     ) -> pd.DataFrame:
-        '''Shift financial statement periods quarters back to history.'''
+        """Shift financial statement periods quarters back to history.
+
+        Args:
+            df (pd.DataFrame): Data shifted.
+            periods (int): Number of periods shifted.
+            meta_cols (list[str], optional): Columns that to be excluded from the shifted.
+                Defaults to ['Ticker', 'Feat_Time'].
+
+        Returns:
+            pd.DataFrame: Shifted data.
+        """
         meta = df[meta_cols]
         shift = (
             df
@@ -176,7 +212,18 @@ class FSFeatures:
         periods: int,
         meta_cols: list[str] = ['Ticker', 'Feat_Time']
     ) -> pd.DataFrame:
-        '''Calculate the growth rate (momentum) of financial statement'''
+        """Calculate the growth rate (momentum) of financial statement.
+
+        Args:
+            df (pd.DataFrame): Data to be calculated the momentum.
+            window (int): Number of periods in rolling mean.
+            periods (int): Number of gap periods to be divided.
+            meta_cols (list[str], optional): Columns to be excluded from the calculation.
+                Defaults to ['Ticker', 'Feat_Time'].
+
+        Returns:
+            pd.DataFrame: Momentum data.
+        """
         meta = df[meta_cols]
 
         roll_mean = FSFeatures.calculate_roll_mean(df, window)
@@ -197,7 +244,20 @@ class FSFeatures:
         periods_list: list[int] = [1, 2, 4],
         meta_cols: list[str] = ['Ticker', 'Feat_Time']
     ) -> pd.DataFrame:
-        '''Calulate growth rate (momentum) over different windows and periods settings.'''
+        """Calulate growth rate (momentum) over different windows and periods settings.
+
+        Args:
+            df (pd.DataFrame): Data to be calculated the momentum.
+            window_list (list[int], optional): Number of periods in rolling mean.
+                Defaults to [1, 2, 4].
+            periods_list (list[int], optional): Number of gap periods to be divided.
+                Defaults to [1, 2, 4].
+            meta_cols (list[str], optional): Columns to be excluded from the calculation.
+                Defaults to ['Ticker', 'Feat_Time'].
+
+        Returns:
+            pd.DataFrame: Momentum data.
+        """
         meta = df[meta_cols]
         roll_mean_momentum = []
         for window in window_list:
@@ -213,8 +273,18 @@ class FSFeatures:
         df: pd.DataFrame,
         master_col: str,
         meta_cols: list[str] = ['Ticker', 'Feat_Time']
-    ):
-        '''Calulate common size of financial statement.'''
+    ) -> pd.DataFrame:
+        """Calulate common size of financial statement.
+
+        Args:
+            df (pd.DataFrame): Financial statement.
+            master_col (str): Denominator column.
+            meta_cols (list[str], optional): Columns to be excluded from the calculation.
+                Defaults to ['Ticker', 'Feat_Time'].
+
+        Returns:
+            pd.DataFrame: Common size data.
+        """
         df_common = (
             df
             .set_index(meta_cols)
@@ -231,7 +301,18 @@ class FSFeatures:
         periods: int,
         meta_cols: list[str] = ['Ticker', 'Feat_Time']
     ) -> pd.DataFrame:
-        '''Calculate the growth rate (momentum) of financial statement common size'''
+        """Calculate the growth rate (momentum) of financial statement common size.
+
+        Args:
+            df (pd.DataFrame): Data to be calculated the momentum.
+            window (int): Number of periods in rolling mean.
+            periods (int): Number of gap periods to be deducted.
+            meta_cols (list[str], optional): Columns to be excluded from the calculation.
+                Defaults to ['Ticker', 'Feat_Time'].
+
+        Returns:
+            pd.DataFrame: Momentum data.
+        """
         meta = df[meta_cols]
         roll_mean = FSFeatures.calculate_roll_mean(df, window)
         shift = FSFeatures.shift_data(roll_mean, periods)
@@ -250,10 +331,21 @@ class FSFeatures:
         periods_list: list[int] = [1, 2, 4],
         meta_cols: list[str] = ['Ticker', 'Feat_Time']
     ) -> pd.DataFrame:
-        '''
-        Calulate growth rate (momentum) of financial statement common size
-        over different windows and periods settings.
-        '''
+        """ Calulate growth rate (momentum) of financial statement common size over different
+            windows and periods settings.
+
+        Args:
+            df (pd.DataFrame): Data to be calculated the momentum.
+            window_list (list[int], optional): Number of periods in rolling mean.
+                Defaults to [1, 2, 4].
+            periods_list (list[int], optional): Number of gap periods to be deducted.
+                Defaults to [1, 2, 4].
+            meta_cols (list[str], optional): Columns to be excluded from the calculation.
+                Defaults to ['Ticker', 'Feat_Time'].
+
+        Returns:
+            pd.DataFrame: Momentum data.
+        """
         meta = df[meta_cols]
         roll_mean_momentum = []
         for window in window_list:
