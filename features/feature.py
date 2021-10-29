@@ -30,7 +30,7 @@ def get_tickers(folder: str = '../financeInfo') -> list[str]:
 def get_fs(
     ticker: str,
     fs: str,
-    term: str,
+    term: str = 'Quarter',
     levels: list[int] = [0, 1, 2],
     name: str = 'NameEn',
     raw_path: str = '../financeInfo/',
@@ -42,9 +42,9 @@ def get_fs(
     Args:
         ticker (str): Company ticker that want to get financial statement for.
         fs (str): Type of financial statement. Can be 'KQKD', 'CDKT', 'LC', 'CSTC' or 'CTKH'.
-        term (str): 'Quarter' or 'Annual'.
+        term (str): 'Quarter' or 'Annual'. Defaults to 'Quarter'.
         levels (list[int], optional): The headline levels in financial statement that want to get.
-            The more levels, the more detail. Ranging from 0 to 6. Only applicable for 'CDKT.
+            The more levels, the more detail. Ranging from 0 to 6. Only applicable for 'CDKT'.
             Defaults to [0, 1, 2].
         name (str, optional): Headline languages. 'NameEn' for English. 'Name' for Vietnamese.
             'ReportNormID' for code. 'ID' for 1, 2, 3, etc. Defaults to 'NameEn'.
@@ -112,6 +112,10 @@ def get_fs(
 
             # concatenate if there are many fs_names (CSTC)
             fs_df_names = pd.concat(fs_df_names, axis=1)
+            # some tables have duplicated columns. Firstly, remove column with all NA,
+            # Then keep the first duplicated column if still duplicated.
+            fs_df_names = fs_df_names.dropna(axis=1)
+            fs_df_names = fs_df_names.loc[:, ~fs_df_names.columns.duplicated()]
             fs_df_terms.append(fs_df_names)  # append all the pages (json files)
 
         except AttributeError:  # CTKH
@@ -128,6 +132,10 @@ def get_fs(
             terms = pd.json_normalize(jason_meta)['YearPeriod'].astype(str)
             terms_no = len(fs_df)
             fs_df = fs_df.set_axis(terms.tail(terms_no), axis=0)
+            # some tables have duplicated columns. Firstly, remove column with all NA,
+            # Then keep the first duplicated column if still duplicated.
+            fs_df = fs_df.dropna(axis=1)
+            fs_df = fs_df.loc[:, ~fs_df.columns.duplicated()]
             fs_df_terms.append(fs_df)  # append all the pages (json files)
 
     fs_df_terms = pd.concat(fs_df_terms, axis=0)  # concatenate all the pages (json files)
@@ -142,6 +150,34 @@ def get_fs(
     fs_df_terms.insert(0, ticker_col, ticker)
     fs_df_terms.columns.name = None
     return fs_df_terms
+
+
+def get_fs_multiple(tickers: list[str], fs: list[str]) -> pd.DataFrame:
+    """Return multiple financial statements of many tickers at once.
+
+    Args:
+        tickers (list[str]): tickers.
+        fs (list[str]): names of financial statements.
+
+    Raises:
+        ValueError: Choose among ['KQKD', 'CDKT', 'LC', 'CSTC', 'CTKH'].
+
+    Returns:
+        pd.DataFrame: Financial statements of many tickers.
+    """
+    if set(fs) > set(['KQKD', 'CDKT', 'LC', 'CSTC', 'CTKH']):
+        raise ValueError("fs must be among ['KQKD', 'CDKT', 'LC', 'CSTC', 'CTKH'].")
+    fs_multiple = []
+    for fs_str in fs:
+        print(f'Getting {fs_str}...')
+        fs_dfs = []
+        for ticker in tickers:
+            fs_df = get_fs(ticker=ticker, fs=fs_str)
+            fs_dfs.append(fs_df)
+        fs_dfs = pd.concat(fs_dfs, axis=0).set_index(['Ticker', 'Feat_Time'])
+        fs_multiple.append(fs_dfs)
+    fs_multiple = pd.concat(fs_multiple, axis=1).sort_index(ascending=[True, False]).reset_index()
+    return fs_multiple
 
 
 class FSFeatures:
